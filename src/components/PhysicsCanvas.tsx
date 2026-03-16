@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as Matter from 'matter-js';
-import { CustomShape, RecordingData, RecordedBody } from '../types';
+import { CustomShape, CustomJoint, RecordingData, RecordedBody } from '../types';
 
 interface PhysicsCanvasProps {
   simStatus: 'idle' | 'simulating' | 'finished';
@@ -79,7 +79,6 @@ export function PhysicsCanvas(props: PhysicsCanvasProps) {
         wireframes: false,
         background: '#18181b', // zinc-900
         hasBounds: true,
-        showConstraints: true,
       }
     });
     renderRef.current = render;
@@ -383,7 +382,7 @@ export function PhysicsCanvas(props: PhysicsCanvasProps) {
       Matter.Runner.stop(runner);
       Matter.Engine.clear(engine);
     };
-  }, [props.customShapes, props.customJoints, props.resetTrigger]);
+  }, [props.customShapes, props.customJoints, props.resetTrigger, props.simStatus]);
 
   useEffect(() => {
     if (!engineRef.current) return;
@@ -422,15 +421,11 @@ export function PhysicsCanvas(props: PhysicsCanvasProps) {
   const startSimulation = () => {
     if (!engineRef.current || !mouseConstraintRef.current) return;
 
-    // Set bodies to their actual static state
     const allBodies = Matter.Composite.allBodies(engineRef.current.world);
+    
+    // Wake up all bodies
     allBodies.forEach(body => {
-      if (body.plugin && body.plugin.customShapeId) {
-        const shape = props.customShapes.find(s => s.id === body.plugin.customShapeId);
-        if (shape) {
-          Matter.Body.setStatic(body, shape.isStatic);
-        }
-      }
+      Matter.Sleeping.set(body, false);
     });
 
     // Initialize recording data
